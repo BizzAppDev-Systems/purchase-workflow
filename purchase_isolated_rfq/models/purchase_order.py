@@ -39,6 +39,14 @@ class PurchaseOrder(models.Model):
         if not order_sequence and vals.get("name", "/") == "/":
             vals["name"] = self.env["ir.sequence"].next_by_code("purchase.rfq") or "/"
         return super().create(vals)
+    
+    def copy(self, default=None):
+        """Allow duplicate PO back to RFQ document"""
+        self.ensure_one()
+        if default is None:
+            default = dict(default or {}, order_sequence=False, name="/")
+            self = self.with_context(order_sequence=False)
+        return super().copy(default)
 
     def _prepare_order_from_rfq(self):
         return {
@@ -47,16 +55,22 @@ class PurchaseOrder(models.Model):
             "quote_id": self.id,
             "partner_ref": self.partner_ref,
         }
+    
+    def _update_value_order_from_rfq(self, order):
+        return order
 
     def action_convert_to_order(self):
         self.ensure_one()
         if self.order_sequence:
             raise UserError(_("Only quotation can convert to order"))
         purchase_order = self.copy(self._prepare_order_from_rfq())
+        # Some fields is copy=False.
+        # This function will hook for add it in PO
+        purchase_order = self._update_value_order_from_rfq(purchase_order)
         purchase_order.button_confirm()
         # Reference from this RFQ to Purchase Order
         self.purchase_order_id = purchase_order.id
-        if self.state == "draft":
+        if self.state in ["draft", "sent"]:
             self.button_done()
         return self.open_duplicated_purchase_order()
 
