@@ -4,10 +4,10 @@
 from odoo.tests import Form, common
 
 
-class TestPurchaseRequisitionLineDescription(common.SavepointCase):
+class TestPurchaseRequisitionLineDescription(common.TransactionCase):
     @classmethod
     def setUpClass(cls):
-        super(TestPurchaseRequisitionLineDescription, cls).setUpClass()
+        super().setUpClass()
         cls.partner = cls.env["res.partner"].create(
             {
                 "name": "Test partner",
